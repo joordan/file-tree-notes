@@ -1,0 +1,149 @@
+{
+  "name": "file-tree-notes",
+  "displayName": "File Tree Notes",
+  "description": "Create note for each file",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onLanguage:*"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "file-tree-notes.toggleNoteSource",
+        "title": "File Tree Notes: Toggle between Note and Source"
+      },
+      {
+        "command": "file-tree-notes.openStorageSettings",
+        "title": "File Tree Notes: Open Notes Storage Settings"
+      },
+      {
+        "command": "file-tree-notes.switchStorageMode",
+        "title": "File Tree Notes: Switch Notes Storage Mode"
+      },
+      {
+        "command": "file-tree-notes.deleteNote",
+        "title": "Delete Note"
+      },
+      {
+        "command": "file-tree-notes.deleteFolder",
+        "title": "Delete Folder"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "file-tree-notes.toggleNoteSource",
+        "key": "ctrl+alt+n",
+        "mac": "cmd+alt+n",
+        "when": "editorTextFocus && !editorReadonly"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "File Tree Notes",
+      "properties": {
+        "fileTreeNotes.storageMode": {
+          "type": "string",
+          "enum": ["global", "workspace"],
+          "default": "global",
+          "description": "Where to store notes: 'global' stores all notes in a central location, 'workspace' stores notes in each project."
+        },
+        "fileTreeNotes.globalNotesPath": {
+          "type": "string",
+          "default": "",
+          "description": "Custom path for global notes storage. If empty, uses VS Code's global storage. Only used when storageMode is 'global'."
+        },
+        "fileTreeNotes.workspaceNotesPath": {
+          "type": "string",
+          "default": ".notes",
+          "description": "Relative path from workspace root where notes are stored. Only used when storageMode is 'workspace'."
+        },
+        "fileTreeNotes.openInSplitView": {
+          "type": "boolean",
+          "default": false,
+          "description": "Open note/source in split view (side-by-side). If false, open in the same tab (replace current)."
+        }
+      }
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "file-tree-notes.openStorageSettings",
+          "when": "view == fileTreeNotes.onboardingView",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "file-tree-notes.deleteNote",
+          "when": "view == fileTreeNotes.notesView && viewItem == noteFile",
+          "group": "navigation"
+        },
+        {
+          "command": "file-tree-notes.deleteFolder",
+          "when": "view == fileTreeNotes.notesView && viewItem == noteFolder",
+          "group": "navigation"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "fileTreeNotes",
+          "title": "File Tree Notes",
+          "icon": "resources/note.svg"
+        }
+      ]
+    },
+    "views": {
+      "fileTreeNotes": [
+        {
+          "id": "fileTreeNotes.onboardingView",
+          "name": "Getting Started",
+          "when": "fileTreeNotes.showOnboarding",
+          "type": "webview",
+          "visibility": "visible"
+        },
+        {
+          "id": "fileTreeNotes.notesView",
+          "name": "Notes",
+          "when": "!fileTreeNotes.showOnboarding"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "npm run check-types && npm run lint && node esbuild.js",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "package": "npm run check-types && npm run lint && node esbuild.js --production",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.100.0",
+    "@typescript-eslint/eslint-plugin": "^8.31.1",
+    "@typescript-eslint/parser": "^8.31.1",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.5.2",
+    "esbuild": "^0.25.3",
+    "eslint": "^9.25.1",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.8.3"
+  }
+}
