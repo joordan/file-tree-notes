@@ -91,7 +91,7 @@
         {
           "id": "fileTreeNotes",
           "title": "File Tree Notes",
-          "icon": "resources/note.svg"
+          "icon": "resources/tree.svg"
         }
       ]
     },
