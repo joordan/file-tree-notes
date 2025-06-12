@@ -73,13 +73,6 @@
       }
     },
     "menus": {
-      "view/title": [
-        {
-          "command": "file-tree-notes.openStorageSettings",
-          "when": "view == fileTreeNotes.onboardingView",
-          "group": "navigation"
-        }
-      ],
       "view/item/context": [
         {
           "command": "file-tree-notes.deleteNote",

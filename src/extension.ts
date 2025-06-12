@@ -403,7 +403,7 @@ class NotesTreeDataProvider implements vscode.TreeDataProvider<NoteTreeItem | vs
       const fullPath = path.join(base, e.name);
       const uri = vscode.Uri.file(fullPath);
       if (e.isDirectory()) {
-        return new NoteTreeItem(e.name, uri, vscode.TreeItemCollapsibleState.Collapsed);
+        return new NoteTreeItem(e.name, uri, vscode.TreeItemCollapsibleState.Expanded);
       } else {
         return new NoteTreeItem(
           e.name,
@@ -417,16 +417,6 @@ class NotesTreeDataProvider implements vscode.TreeDataProvider<NoteTreeItem | vs
         );
       }
     });
-  }
-
-  getSelectFolderTreeItem(label: string): vscode.TreeItem {
-    const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
-    item.command = {
-      command: 'file-tree-notes.openStorageSettings',
-      title: 'Open Notes Storage Settings',
-    };
-    item.iconPath = new vscode.ThemeIcon('folder');
-    return item;
   }
 }
 
@@ -718,7 +708,28 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // Register native tree view for notes
   const notesTreeDataProvider = new NotesTreeDataProvider(context);
-  vscode.window.createTreeView('fileTreeNotes.notesView', { treeDataProvider: notesTreeDataProvider });
+  const notesTreeView = vscode.window.createTreeView('fileTreeNotes.notesView', { treeDataProvider: notesTreeDataProvider });
+
+  // Function to update the view title
+  const updateViewTitle = () => {
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (workspaceFolder) {
+      // Always show the workspace folder name
+      notesTreeView.title = path.basename(workspaceFolder.uri.fsPath);
+    }
+  };
+
+  // Update view title on activation and when config changes
+  updateViewTitle();
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration('fileTreeNotes.notesDirectory') || 
+          e.affectsConfiguration('fileTreeNotes.storageMode') ||
+          e.affectsConfiguration('fileTreeNotes.globalNotesPath')) {
+        updateViewTitle();
+      }
+    })
+  );
 
   // Register the onboarding webview provider
   const onboardingProvider = new OnboardingWebviewProvider(context);
