@@ -2,7 +2,7 @@
   "name": "file-tree-notes",
   "publisher": "JordanEspejo",
   "displayName": "File Tree Notes",
-  "description": "Create notes from your files in it's own file tree",
+  "description": "Create a notes file tree from your files",
   "version": "0.0.6",
   "icon": "resources/tree.png",
   "engines": {
@@ -100,7 +100,7 @@
       "fileTreeNotes": [
         {
           "id": "fileTreeNotes.notesView",
-          "name": "Notes"
+          "name": "File Tree Notes"
         }
       ]
     }
