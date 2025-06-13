@@ -3,7 +3,7 @@
   "publisher": "JordanEspejo",
   "displayName": "File Tree Notes",
   "description": "Create note for each file",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "icon": "resources/tree.jpg",
   "engines": {
     "vscode": "^1.100.0"
