@@ -783,6 +783,13 @@ export async function activate(context: vscode.ExtensionContext) {
 
   /** Helper: reveal a note file in the tree (no-op if not present) */
   const revealInNotesTree = async (fsPath: string) => {
+    // First ensure the tree is refreshed and items are loaded
+    notesTreeDataProvider.refresh();
+    
+    // Wait a bit for the tree to update
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Try to get the element after refresh
     const element = notesTreeDataProvider.getItemByUri(fsPath);
     if (element) {
       try {
