@@ -1,11 +1,11 @@
-# Changelog
+# Change Log
 
 All notable changes to the "File Tree Notes" extension will be documented in this file.
 
 ## [0.0.5] - 2024-03-19
 
 ### Removed
-- Removed onboarding view and related functionality
+- Removed onboarding view and related functionality for simplicity
 
 ## [0.0.4] - 2024-03-19
 
