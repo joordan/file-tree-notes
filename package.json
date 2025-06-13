@@ -2,8 +2,8 @@
   "name": "file-tree-notes",
   "publisher": "JordanEspejo",
   "displayName": "File Tree Notes",
-  "description": "Create and manage notes alongside your source files in a tree view",
-  "version": "0.0.4",
+  "description": "Create notes from your files in it's own file tree",
+  "version": "0.0.5",
   "icon": "resources/tree.png",
   "engines": {
     "vscode": "^1.100.0"
@@ -99,16 +99,8 @@
     "views": {
       "fileTreeNotes": [
         {
-          "id": "fileTreeNotes.onboardingView",
-          "name": "Getting Started",
-          "when": "fileTreeNotes.showOnboarding",
-          "type": "webview",
-          "visibility": "visible"
-        },
-        {
           "id": "fileTreeNotes.notesView",
-          "name": "Notes",
-          "when": "!fileTreeNotes.showOnboarding"
+          "name": "Notes"
         }
       ]
     }

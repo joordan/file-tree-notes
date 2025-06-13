@@ -11,7 +11,6 @@ A VS Code extension that allows you to create and manage notes for your files. E
 - Support for both global and workspace-local note storage
 - Automatic .gitignore integration for notes directory
 - Tree view for browsing and managing notes
-- Onboarding experience for first-time users
 
 ## Usage
 
@@ -60,19 +59,6 @@ To switch storage modes:
 2. Use "File Tree Notes: Switch Notes Storage Mode"
 3. Choose between global and workspace storage
 
-### Views
-
-1. **Onboarding View**:
-   - Shown when no notes exist
-   - Provides quick access to storage settings
-   - Guides new users through the setup process
-
-2. **Tree View**: 
-   - Browse all notes in the current workspace
-   - Open notes directly from the tree
-
-
-
 ### Configuration
 
 The extension can be configured through VS Code settings:
@@ -94,5 +80,4 @@ Initial release of File Tree Notes:
 - Global storage support
 - Storage mode switching
 - Keyboard shortcuts
-- Onboarding experience
 - Automatic .gitignore integration

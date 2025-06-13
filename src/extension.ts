@@ -487,102 +487,6 @@ class NotesTreeDataProvider implements vscode.TreeDataProvider<NoteTreeItem | vs
   }
 }
 
-// Place this class definition before the activate function
-class OnboardingWebviewProvider implements vscode.WebviewViewProvider {
-  static readonly viewType = 'fileTreeNotes.onboardingView';
-
-  constructor(private readonly context: vscode.ExtensionContext) {}
-
-  resolveWebviewView(
-    webviewView: vscode.WebviewView,
-    context: vscode.WebviewViewResolveContext,
-    _token: vscode.CancellationToken,
-  ) {
-    webviewView.webview.options = {
-      enableScripts: true,
-      localResourceRoots: [this.context.extensionUri]
-    };
-
-    webviewView.webview.html = this.getHtmlForWebview(webviewView.webview);
-
-    // Handle messages from the webview
-    webviewView.webview.onDidReceiveMessage(async message => {
-      switch (message.command) {
-        case 'createNote':
-          await vscode.commands.executeCommand('file-tree-notes.openNote');
-          break;
-      }
-    });
-  }
-
-  private getHtmlForWebview(webview: vscode.Webview) {
-    return `<!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-          body {
-            padding: 20px;
-            color: var(--vscode-foreground);
-            font-family: var(--vscode-font-family);
-          }
-          .container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            gap: 20px;
-          }
-          .icon {
-            font-size: 48px;
-            margin-bottom: 10px;
-          }
-          .title {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 10px;
-          }
-          .description {
-            font-size: 14px;
-            line-height: 1.4;
-            margin-bottom: 20px;
-          }
-          .button {
-            background-color: var(--vscode-button-background);
-            color: var(--vscode-button-foreground);
-            border: none;
-            padding: 8px 16px;
-            border-radius: 2px;
-            cursor: pointer;
-            font-size: 14px;
-          }
-          .button:hover {
-            background-color: var(--vscode-button-hoverBackground);
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="icon">📝</div>
-          <div class="title">Welcome to File Tree Notes</div>
-          <div class="description">
-            Create notes alongside your source files to keep your documentation organized and easily accessible.
-            <br><br>
-            Get started by creating your first note for any file in your workspace.
-          </div>
-          <button class="button" onclick="createNote()">Create Your First Note</button>
-        </div>
-        <script>
-          function createNote() {
-            vscode.postMessage({ command: 'createNote' });
-          }
-        </script>
-      </body>
-      </html>`;
-  }
-}
-
 export async function activate(context: vscode.ExtensionContext) {
   // Register native tree view for notes
   const notesTreeDataProvider = new NotesTreeDataProvider(context);
@@ -590,12 +494,6 @@ export async function activate(context: vscode.ExtensionContext) {
     treeDataProvider: notesTreeDataProvider,
     showCollapseAll: true
   });
-
-  // Register the onboarding webview provider
-  const onboardingProvider = new OnboardingWebviewProvider(context);
-  context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(OnboardingWebviewProvider.viewType, onboardingProvider)
-  );
 
   // Function to update the sidebar context
   const updateSidebarContext = async () => {
