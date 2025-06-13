@@ -347,6 +347,10 @@ class NoteTreeItem extends vscode.TreeItem {
     super(label, collapsibleState);
     this.resourceUri = resourceUri;
     this.command = command;
+
+    // «id» gives the element a stable identity so TreeView.reveal works.
+    this.id = resourceUri.fsPath;
+
     if (collapsibleState === vscode.TreeItemCollapsibleState.None) {
       this.contextValue = 'noteFile';
       this.iconPath = new vscode.ThemeIcon('note');
@@ -359,66 +363,130 @@ class NoteTreeItem extends vscode.TreeItem {
 
 // TreeDataProvider for notes
 class NotesTreeDataProvider implements vscode.TreeDataProvider<NoteTreeItem | vscode.TreeItem> {
-  private _onDidChangeTreeData: vscode.EventEmitter<NoteTreeItem | undefined | void> = new vscode.EventEmitter<NoteTreeItem | undefined | void>();
+  private _onDidChangeTreeData: vscode.EventEmitter<NoteTreeItem | undefined | void> = new vscode.EventEmitter();
   readonly onDidChangeTreeData: vscode.Event<NoteTreeItem | undefined | void> = this._onDidChangeTreeData.event;
+
+  // Map so we can retrieve an element by its fsPath quickly
+  private itemMap = new Map<string, NoteTreeItem>();
 
   constructor(private context: vscode.ExtensionContext) {}
 
   refresh(): void {
+    this.itemMap.clear();
     this._onDidChangeTreeData.fire();
+  }
+
+  /** Find the tree element that represents a given file path */
+  getItemByUri(fsPath: string): NoteTreeItem | undefined {
+    return this.itemMap.get(fsPath);
+  }
+
+  async getChildren(element?: NoteTreeItem): Promise<NoteTreeItem[]> {
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!workspaceFolder) {
+      return [];
+    }
+
+    const notesDir = getNotesDirectory(workspaceFolder.uri.fsPath, this.context);
+    if (!notesDir) {
+      return [];
+    }
+
+    if (!element) {
+      // Root level - show the notes directory
+      const rootItem = new NoteTreeItem(
+        path.basename(notesDir),
+        vscode.Uri.file(notesDir),
+        vscode.TreeItemCollapsibleState.Expanded
+      );
+      this.itemMap.set(notesDir, rootItem);
+      return [rootItem];
+    }
+
+    const elementPath = element.resourceUri.fsPath;
+    if (!elementPath.startsWith(notesDir)) {
+      return [];
+    }
+
+    try {
+      const entries = await fs.promises.readdir(elementPath, { withFileTypes: true });
+      return entries
+        .filter(entry => entry.isDirectory() || entry.name.endsWith('.md'))
+        .map(entry => {
+          const fullPath = path.join(elementPath, entry.name);
+          const uri = vscode.Uri.file(fullPath);
+          const collapsibleState = entry.isDirectory() 
+            ? vscode.TreeItemCollapsibleState.Expanded 
+            : vscode.TreeItemCollapsibleState.None;
+
+          let item: NoteTreeItem;
+          if (entry.isDirectory()) {
+            item = new NoteTreeItem(entry.name, uri, collapsibleState);
+          } else {
+            item = new NoteTreeItem(
+              entry.name,
+              uri,
+              collapsibleState,
+              {
+                command: 'file-tree-notes.openNoteFile',
+                title: 'Open Note',
+                arguments: [uri]
+              }
+            );
+          }
+
+          // Populate the lookup map
+          this.itemMap.set(fullPath, item);
+          return item;
+        })
+        .sort((a, b) => {
+          // Directories first, then files
+          const aIsDir = a.collapsibleState !== vscode.TreeItemCollapsibleState.None;
+          const bIsDir = b.collapsibleState !== vscode.TreeItemCollapsibleState.None;
+          if (aIsDir !== bIsDir) {
+            return aIsDir ? -1 : 1;
+          }
+          return a.label.localeCompare(b.label);
+        });
+    } catch (error) {
+      console.error('Error reading directory:', error);
+      return [];
+    }
+  }
+
+  getParent(element: NoteTreeItem): NoteTreeItem | undefined {
+    if (!element.resourceUri) {
+      return undefined;
+    }
+
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!workspaceFolder) {
+      return undefined;
+    }
+
+    const notesDir = getNotesDirectory(workspaceFolder.uri.fsPath, this.context);
+    if (!notesDir) {
+      return undefined;
+    }
+
+    const elementPath = element.resourceUri.fsPath;
+    if (!elementPath.startsWith(notesDir)) {
+      return undefined;
+    }
+
+    const parentPath = path.dirname(elementPath);
+    if (parentPath === notesDir) {
+      return this.itemMap.get(notesDir);
+    }
+
+    return this.itemMap.get(parentPath);
   }
 
   getTreeItem(element: NoteTreeItem | vscode.TreeItem): vscode.TreeItem {
     return element;
   }
-
-  async getChildren(element?: NoteTreeItem): Promise<(NoteTreeItem | vscode.TreeItem)[]> {
-    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-    if (!workspaceFolder) {
-      return [
-        new vscode.TreeItem('Open a workspace to use File Tree Notes', vscode.TreeItemCollapsibleState.None)
-      ];
-    }
-
-    const config = vscode.workspace.getConfiguration('fileTreeNotes');
-    const storageMode = config.get<string>('storageMode') || 'global';
-    const notesDir = getNotesDirectory(workspaceFolder.uri.fsPath, this.context);
-
-    if (!fs.existsSync(notesDir)) {
-      return [];
-    }
-
-    const base = element ? element.resourceUri.fsPath : notesDir;
-    if (!fs.existsSync(base)) {
-      return [];
-    }
-
-    const entries = fs.readdirSync(base, { withFileTypes: true });
-    const filtered = entries.filter(e => e.isDirectory() || (e.isFile() && e.name.endsWith('.md')));
-    if (filtered.length === 0 && !element) {
-      return [];
-    }
-
-    return filtered.map(e => {
-      const fullPath = path.join(base, e.name);
-      const uri = vscode.Uri.file(fullPath);
-      if (e.isDirectory()) {
-        return new NoteTreeItem(e.name, uri, vscode.TreeItemCollapsibleState.Expanded);
-      } else {
-        return new NoteTreeItem(
-          e.name,
-          uri,
-          vscode.TreeItemCollapsibleState.None,
-          {
-            command: 'file-tree-notes.openNoteFile',
-            title: 'Open Note',
-            arguments: [uri]
-          }
-        );
-      }
-    });
-  }
 }
+
 
 // Place this class definition before the activate function
 class OnboardingWebviewProvider implements vscode.WebviewViewProvider {
@@ -708,114 +776,37 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // Register native tree view for notes
   const notesTreeDataProvider = new NotesTreeDataProvider(context);
-  const notesTreeView = vscode.window.createTreeView('fileTreeNotes.notesView', { treeDataProvider: notesTreeDataProvider });
+  const notesTreeView = vscode.window.createTreeView('fileTreeNotes.notesView', { 
+    treeDataProvider: notesTreeDataProvider,
+    showCollapseAll: true
+  });
 
-  // Function to update the view title
-  const updateViewTitle = () => {
-    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-    if (workspaceFolder) {
-      // Always show the workspace folder name
-      notesTreeView.title = path.basename(workspaceFolder.uri.fsPath);
+  /** Helper: reveal a note file in the tree (no-op if not present) */
+  const revealInNotesTree = async (fsPath: string) => {
+    const element = notesTreeDataProvider.getItemByUri(fsPath);
+    if (element) {
+      try {
+        await notesTreeView.reveal(element, { select: true, focus: false, expand: true });
+      } catch {
+        /* element might not be visible / expanded yet – ignore */
+      }
     }
   };
 
-  // Update view title on activation and when config changes
-  updateViewTitle();
+  // Highlight the note whenever the active editor changes
   context.subscriptions.push(
-    vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration('fileTreeNotes.notesDirectory') || 
-          e.affectsConfiguration('fileTreeNotes.storageMode') ||
-          e.affectsConfiguration('fileTreeNotes.globalNotesPath')) {
-        updateViewTitle();
-      }
-    })
-  );
+    vscode.window.onDidChangeActiveTextEditor(editor => {
+      if (!editor) { return; }
+      const uri = editor.document.uri;
+      if (uri.scheme !== 'file') { return; }
 
-  // Register the onboarding webview provider
-  const onboardingProvider = new OnboardingWebviewProvider(context);
-  context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(OnboardingWebviewProvider.viewType, onboardingProvider)
-  );
-
-  // Register a command to allow manual refresh from code
-  context.subscriptions.push(
-    vscode.commands.registerCommand('fileTreeNotes.notesView.refresh', () => {
-      notesTreeDataProvider.refresh();
-    })
-  );
-
-  // Refresh tree when notes are saved or deleted
-  context.subscriptions.push(
-    vscode.workspace.onDidSaveTextDocument((doc) => {
-      if (doc.fileName.endsWith('.md')) {
-        notesTreeDataProvider.refresh();
-      }
-    })
-  );
-  context.subscriptions.push(
-    vscode.workspace.onDidDeleteFiles((e) => {
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-      if (!workspaceFolder) {
-        return;
-      }
-      const config = vscode.workspace.getConfiguration('fileTreeNotes');
-      const notesDirSetting = config.get<string>('notesDirectory') || '.notes';
-      const notesDir = path.join(workspaceFolder.uri.fsPath, notesDirSetting);
-      let shouldRefresh = false;
-      for (const file of e.files) {
-        // Check if the deleted file or folder is inside the notes directory
-        if (file.fsPath.startsWith(notesDir + path.sep)) {
-          shouldRefresh = true;
-          break;
-        }
-      }
-      if (shouldRefresh) {
-        notesTreeDataProvider.refresh();
-      }
-    })
-  );
+      if (!workspaceFolder) { return; }
+      const notesDir = getNotesDirectory(workspaceFolder.uri.fsPath, context);
 
-  // Register command to open note file from tree
-  context.subscriptions.push(
-    vscode.commands.registerCommand('file-tree-notes.openNoteFile', async (uri: vscode.Uri) => {
-      const doc = await vscode.workspace.openTextDocument(uri);
-      vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
-    })
-  );
-
-  // Register command to select notes directory
-  context.subscriptions.push(
-    vscode.commands.registerCommand('file-tree-notes.selectNotesDirectory', async () => {
-      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-      if (!workspaceFolder) {
-        vscode.window.showErrorMessage('Open a workspace to select a notes directory.');
-        return;
+      if (uri.fsPath.startsWith(notesDir) && uri.fsPath.endsWith('.md')) {
+        revealInNotesTree(uri.fsPath);
       }
-      const uri = await vscode.window.showOpenDialog({
-        canSelectFolders: true,
-        canSelectFiles: false,
-        canSelectMany: false,
-        openLabel: 'Select Notes Directory',
-        defaultUri: workspaceFolder.uri
-      });
-      if (uri && uri[0]) {
-        const selectedPath = uri[0].fsPath;
-        const relative = path.relative(workspaceFolder.uri.fsPath, selectedPath);
-        if (relative.startsWith('..')) {
-          vscode.window.showErrorMessage('Notes directory must be inside the workspace.');
-          return;
-        }
-        const config = vscode.workspace.getConfiguration('fileTreeNotes');
-        await config.update('notesDirectory', relative, true);
-        vscode.window.showInformationMessage(`Notes directory set to: ${relative}`);
-      }
-    })
-  );
-
-  // Register command to open the notes directory setting in the settings UI
-  context.subscriptions.push(
-    vscode.commands.registerCommand('file-tree-notes.openNotesDirectorySetting', async () => {
-      await vscode.commands.executeCommand('workbench.action.openSettings', 'fileTreeNotes.notesDirectory');
     })
   );
 
@@ -910,10 +901,64 @@ export async function activate(context: vscode.ExtensionContext) {
           targetEditor = await vscode.window.showTextDocument(noteUri, options);
         }
 
-        // Focus the File Tree Notes view, then focus back on the editor
+        // Focus the File Tree Notes view
         await vscode.commands.executeCommand('fileTreeNotes.notesView.focus');
+        // Wait a bit for the view to focus
+        await new Promise(resolve => setTimeout(resolve, 100));
+        // Refresh the tree view to ensure it's up to date
+        await vscode.commands.executeCommand('fileTreeNotes.notesView.refresh');
+        // Reveal the note in the tree
+        await revealInNotesTree(notePath);
+        // Focus back on the editor
         await vscode.window.showTextDocument(targetEditor.document, targetEditor.viewColumn);
       }
+    })
+  );
+
+  // Register a command to allow manual refresh from code
+  context.subscriptions.push(
+    vscode.commands.registerCommand('fileTreeNotes.notesView.refresh', () => {
+      notesTreeDataProvider.refresh();
+    })
+  );
+
+  // Refresh tree when notes are saved or deleted
+  context.subscriptions.push(
+    vscode.workspace.onDidSaveTextDocument((doc) => {
+      if (doc.fileName.endsWith('.md')) {
+        notesTreeDataProvider.refresh();
+      }
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.workspace.onDidDeleteFiles((e) => {
+      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+      if (!workspaceFolder) {
+        return;
+      }
+      const config = vscode.workspace.getConfiguration('fileTreeNotes');
+      const notesDirSetting = config.get<string>('notesDirectory') || '.notes';
+      const notesDir = path.join(workspaceFolder.uri.fsPath, notesDirSetting);
+      let shouldRefresh = false;
+      for (const file of e.files) {
+        // Check if the deleted file or folder is inside the notes directory
+        if (file.fsPath.startsWith(notesDir + path.sep)) {
+          shouldRefresh = true;
+          break;
+        }
+      }
+      if (shouldRefresh) {
+        notesTreeDataProvider.refresh();
+      }
+    })
+  );
+
+  // Register command to open note file from tree
+  context.subscriptions.push(
+    vscode.commands.registerCommand('file-tree-notes.openNoteFile', async (uri: vscode.Uri) => {
+      const doc = await vscode.workspace.openTextDocument(uri);
+      vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
     })
   );
 
@@ -1057,6 +1102,52 @@ export async function activate(context: vscode.ExtensionContext) {
         } catch (error) {
           vscode.window.showErrorMessage(`Failed to delete folder: ${error}`);
         }
+      }
+    })
+  );
+
+  // Set up file system watcher for notes directory
+  let notesWatcher: vscode.FileSystemWatcher | undefined;
+  const setupNotesWatcher = () => {
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!workspaceFolder) {
+      return;
+    }
+
+    const notesDir = getNotesDirectory(workspaceFolder.uri.fsPath, context);
+    if (!notesDir) {
+      return;
+    }
+
+    // Dispose of existing watcher if any
+    notesWatcher?.dispose();
+
+    // Create new watcher
+    notesWatcher = vscode.workspace.createFileSystemWatcher(
+      new vscode.RelativePattern(workspaceFolder, path.join(path.relative(workspaceFolder.uri.fsPath, notesDir), '**/*.md'))
+    );
+
+    // Update tree view when files change
+    notesWatcher.onDidChange(() => notesTreeDataProvider.refresh());
+    notesWatcher.onDidCreate(() => notesTreeDataProvider.refresh());
+    notesWatcher.onDidDelete(() => notesTreeDataProvider.refresh());
+  };
+
+  // Set up initial watcher
+  setupNotesWatcher();
+
+  // Update watcher when workspace folders change
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeWorkspaceFolders(() => {
+      setupNotesWatcher();
+    })
+  );
+
+  // Update watcher when storage mode changes
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration(e => {
+      if (e.affectsConfiguration('fileTreeNotes.storageMode')) {
+        setupNotesWatcher();
       }
     })
   );
