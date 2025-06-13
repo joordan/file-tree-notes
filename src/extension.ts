@@ -624,21 +624,22 @@ export async function activate(context: vscode.ExtensionContext) {
     const workspaceRoot = workspaceFolder.uri.fsPath;
     if (isGitRepository(workspaceRoot)) {
       const config = vscode.workspace.getConfiguration('fileTreeNotes');
-      const notesDirSetting = config.get<string>('notesDirectory') || '.notes';
-      
-      // Validate the directory name
-      const error = await validateNotesDirectory(notesDirSetting, workspaceRoot);
-      if (error) {
-        vscode.window.showErrorMessage(error);
-        // Revert to default
-        await config.update('notesDirectory', '.notes', true);
-        return;
+      const storageMode = config.get<string>('storageMode') || 'global';
+      if (storageMode !== 'global') {
+        const notesDirSetting = config.get<string>('notesDirectory') || '.notes';
+        // Validate the directory name
+        const error = await validateNotesDirectory(notesDirSetting, workspaceRoot);
+        if (error) {
+          vscode.window.showErrorMessage(error);
+          // Revert to default
+          await config.update('notesDirectory', '.notes', true);
+          return;
+        }
+        const notesDir = path.join(workspaceRoot, notesDirSetting);
+        addNotesDirToGitignore(workspaceRoot, notesDir).catch(error => {
+          vscode.window.showErrorMessage(`Failed to update .gitignore: ${error}`);
+        });
       }
-
-      const notesDir = path.join(workspaceRoot, notesDirSetting);
-      addNotesDirToGitignore(workspaceRoot, notesDir).catch(error => {
-        vscode.window.showErrorMessage(`Failed to update .gitignore: ${error}`);
-      });
     }
   }
 
