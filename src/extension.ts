@@ -487,61 +487,165 @@ class NotesTreeDataProvider implements vscode.TreeDataProvider<NoteTreeItem | vs
   }
 }
 
-
 // Place this class definition before the activate function
 class OnboardingWebviewProvider implements vscode.WebviewViewProvider {
-  public static readonly viewType = 'fileTreeNotes.onboardingView';
-  private _view?: vscode.WebviewView;
+  static readonly viewType = 'fileTreeNotes.onboardingView';
 
   constructor(private readonly context: vscode.ExtensionContext) {}
 
-  public async resolveWebviewView(
+  resolveWebviewView(
     webviewView: vscode.WebviewView,
     context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken,
   ) {
-    this._view = webviewView;
-    webviewView.webview.options = { 
+    webviewView.webview.options = {
       enableScripts: true,
-      localResourceRoots: []
+      localResourceRoots: [this.context.extensionUri]
     };
-    webviewView.webview.html = this.getHtml();
-    webviewView.webview.onDidReceiveMessage(async (msg) => {
-      if (msg.command === 'selectLocation') {
-        await vscode.commands.executeCommand('file-tree-notes.openNotesDirectorySetting');
-      } else if (msg.command === 'createNote') {
-        await vscode.commands.executeCommand('file-tree-notes.openNote');
+
+    webviewView.webview.html = this.getHtmlForWebview(webviewView.webview);
+
+    // Handle messages from the webview
+    webviewView.webview.onDidReceiveMessage(async message => {
+      switch (message.command) {
+        case 'createNote':
+          await vscode.commands.executeCommand('file-tree-notes.openNote');
+          break;
       }
     });
   }
 
-  getHtml(): string {
-    return `
-      <style>
-        body { font-family: var(--vscode-font-family); margin: 0; padding: 24px; color: var(--vscode-foreground); background: var(--vscode-sideBar-background); }
-        .container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; }
-        .message { font-size: 1.1em; margin-bottom: 24px; text-align: center; }
-        button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 4px; padding: 8px 24px; font-size: 1em; cursor: pointer; margin-bottom: 12px; }
-        button:hover { background: var(--vscode-button-hoverBackground); }
-        .shortcut { font-family: var(--vscode-editor-font-family); background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); padding: 2px 6px; border-radius: 3px; font-size: 0.9em; }
-      </style>
-      <div class="container">
-        <div class="message">Ready to start taking notes? Select a file and create your first note!<br>You can customize the storage location later if needed.</div>
-        <div style="margin-top: 2px; font-size: 0.98em; color: var(--vscode-descriptionForeground); text-align: center; max-width: 320px;">
-          To create a note, select a file, then use the status bar, command palette, or press <span class="shortcut">Cmd+Alt+N</span> (Mac) / <span class="shortcut">Ctrl+Alt+N</span> (Windows/Linux).
+  private getHtmlForWebview(webview: vscode.Webview) {
+    return `<!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body {
+            padding: 20px;
+            color: var(--vscode-foreground);
+            font-family: var(--vscode-font-family);
+          }
+          .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 20px;
+          }
+          .icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+          }
+          .title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+          }
+          .description {
+            font-size: 14px;
+            line-height: 1.4;
+            margin-bottom: 20px;
+          }
+          .button {
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 2px;
+            cursor: pointer;
+            font-size: 14px;
+          }
+          .button:hover {
+            background-color: var(--vscode-button-hoverBackground);
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="icon">📝</div>
+          <div class="title">Welcome to File Tree Notes</div>
+          <div class="description">
+            Create notes alongside your source files to keep your documentation organized and easily accessible.
+            <br><br>
+            Get started by creating your first note for any file in your workspace.
+          </div>
+          <button class="button" onclick="createNote()">Create Your First Note</button>
         </div>
-        <div style="margin-top: 16px; font-size: 0.9em; color: var(--vscode-descriptionForeground);">
-          <a href="#" onclick="vscode.postMessage({command: 'selectLocation'})">Customize storage location</a>
-        </div>
-      </div>
-      <script>
-        const vscode = acquireVsCodeApi();
-      </script>
-    `;
+        <script>
+          function createNote() {
+            vscode.postMessage({ command: 'createNote' });
+          }
+        </script>
+      </body>
+      </html>`;
   }
 }
 
 export async function activate(context: vscode.ExtensionContext) {
+  // Register native tree view for notes
+  const notesTreeDataProvider = new NotesTreeDataProvider(context);
+  const notesTreeView = vscode.window.createTreeView('fileTreeNotes.notesView', { 
+    treeDataProvider: notesTreeDataProvider,
+    showCollapseAll: true
+  });
+
+  // Register the onboarding webview provider
+  const onboardingProvider = new OnboardingWebviewProvider(context);
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(OnboardingWebviewProvider.viewType, onboardingProvider)
+  );
+
+  // Function to update the sidebar context
+  const updateSidebarContext = async () => {
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!workspaceFolder) {
+      return;
+    }
+
+    const notesDir = getNotesDirectory(workspaceFolder.uri.fsPath, context);
+    if (!notesDir) {
+      return;
+    }
+
+    try {
+      const entries = await fs.promises.readdir(notesDir);
+      const hasNotes = entries.some(entry => entry.endsWith('.md'));
+      await vscode.commands.executeCommand('setContext', 'fileTreeNotes:hasNotes', hasNotes);
+    } catch (error) {
+      console.error('Error checking notes directory:', error);
+      await vscode.commands.executeCommand('setContext', 'fileTreeNotes:hasNotes', false);
+    }
+  };
+
+  // Update sidebar context on activation and when files change
+  await updateSidebarContext();
+  context.subscriptions.push(
+    vscode.workspace.onDidCreateFiles(() => updateSidebarContext()),
+    vscode.workspace.onDidDeleteFiles(() => updateSidebarContext()),
+    vscode.workspace.onDidSaveTextDocument(() => updateSidebarContext())
+  );
+
+  /** Helper: reveal a note file in the tree (no-op if not present) */
+  const revealInNotesTree = async (fsPath: string) => {
+    // First ensure the tree is refreshed and items are loaded
+    notesTreeDataProvider.refresh();
+    
+    // Wait a bit for the tree to update
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Try to get the element after refresh
+    const element = notesTreeDataProvider.getItemByUri(fsPath);
+    if (element) {
+      try {
+        await notesTreeView.reveal(element, { select: true, focus: false, expand: true });
+      } catch {
+        /* element might not be visible / expanded yet – ignore */
+      }
+    }
+  };
+
   // Create status bar item
   const statusBarItem = vscode.window.createStatusBarItem(
     vscode.StatusBarAlignment.Right,
@@ -675,144 +779,84 @@ export async function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  const disposable = vscode.commands.registerCommand('file-tree-notes.openNote', async () => {
-    const editor = vscode.window.activeTextEditor;
-    if (!editor) {
-      vscode.window.showWarningMessage('No active file to attach a note to.');
-      return;
-    }
-
-    const workspaceFolder = vscode.workspace.getWorkspaceFolder(editor.document.uri);
-    if (!workspaceFolder) {
-      vscode.window.showErrorMessage('File is not in a workspace folder.');
-      return;
-    }
-
-    const filePath = editor.document.uri.fsPath;
-    const workspaceRoot = workspaceFolder.uri.fsPath;
-    const relativePath = path.relative(workspaceRoot, filePath);
-
-    const config = vscode.workspace.getConfiguration('fileTreeNotes');
-    const openInSplitView = config.get<boolean>('openInSplitView', true);
-    const notesDir = getNotesDirectory(workspaceRoot, context);
-    const noteFilePath = path.join(notesDir, relativePath + '.md');
-
-    // Ensure the folder exists
-    const noteFolder = path.dirname(noteFilePath);
-    if (!fs.existsSync(noteFolder)) {
-      fs.mkdirSync(noteFolder, { recursive: true });
-    }
-
-    // Create the note if it doesn't exist
-    let created = false;
-    let noteUri: vscode.Uri | undefined;
-    if (!fs.existsSync(noteFilePath)) {
-      fs.writeFileSync(noteFilePath, `# Notes for ${relativePath}\n\n`);
-      created = true;
-      noteUri = vscode.Uri.file(noteFilePath);
-      // Use fs to write and then trigger a manual refresh of the tree view
-      setTimeout(() => {
-        vscode.commands.executeCommand('fileTreeNotes.notesView.refresh');
-        // Force a refresh of the activity bar to switch views
-        updateSidebarContext();
-      }, 100);
-    } else {
-      noteUri = vscode.Uri.file(noteFilePath);
-    }
-
-    // Check if note is already open in any visible editor
-    const alreadyOpen = vscode.window.visibleTextEditors.find(e => e.document.uri.fsPath === noteFilePath);
-    if (alreadyOpen) {
-      await vscode.window.showTextDocument(alreadyOpen.document, alreadyOpen.viewColumn, false);
-    } else {
-      const doc = await vscode.workspace.openTextDocument(noteUri);
-      vscode.window.showTextDocument(doc, openInSplitView ? vscode.ViewColumn.Beside : vscode.ViewColumn.Active);
-    }
-    if (created) {
-      vscode.window.showInformationMessage(`Note file created: ${path.relative(workspaceRoot, noteFilePath)}`);
-    }
-    // Update status bar after opening/creating note
-    updateStatusBar();
-  });
-
-  context.subscriptions.push(disposable);
-  
-  // Register command to open source file from note
-  const openSourceFileDisposable = vscode.commands.registerCommand('file-tree-notes.openSourceFile', async () => {
-    const editor = vscode.window.activeTextEditor;
-    if (!editor) {
-      vscode.window.showWarningMessage('No active note file.');
-      return;
-    }
-
-    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-    if (!workspaceFolder) {
-      vscode.window.showErrorMessage('Note is not in a workspace folder.');
-      return;
-    }
-
-    const notePath = editor.document.uri.fsPath;
-    const sourcePath = getSourceFilePath(notePath, workspaceFolder.uri.fsPath, context);
-    if (!sourcePath) {
-      vscode.window.showErrorMessage('Could not find the corresponding source file for this note.');
-      return;
-    }
-
-    const config = vscode.workspace.getConfiguration('fileTreeNotes');
-    const openInSplitView = config.get<boolean>('openInSplitView', true);
-
-    // Check if source file is already open in any visible editor
-    const alreadyOpen = vscode.window.visibleTextEditors.find(e => e.document.uri.fsPath === sourcePath);
-    if (alreadyOpen) {
-      await vscode.window.showTextDocument(alreadyOpen.document, alreadyOpen.viewColumn, false);
-    } else {
-      const sourceUri = vscode.Uri.file(sourcePath);
-      const doc = await vscode.workspace.openTextDocument(sourceUri);
-      vscode.window.showTextDocument(doc, openInSplitView ? vscode.ViewColumn.Beside : vscode.ViewColumn.Active);
-    }
-  });
-
-  context.subscriptions.push(openSourceFileDisposable);
-
-  // Register native tree view for notes
-  const notesTreeDataProvider = new NotesTreeDataProvider(context);
-  const notesTreeView = vscode.window.createTreeView('fileTreeNotes.notesView', { 
-    treeDataProvider: notesTreeDataProvider,
-    showCollapseAll: true
-  });
-
-  /** Helper: reveal a note file in the tree (no-op if not present) */
-  const revealInNotesTree = async (fsPath: string) => {
-    // First ensure the tree is refreshed and items are loaded
-    notesTreeDataProvider.refresh();
-    
-    // Wait a bit for the tree to update
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    // Try to get the element after refresh
-    const element = notesTreeDataProvider.getItemByUri(fsPath);
-    if (element) {
-      try {
-        await notesTreeView.reveal(element, { select: true, focus: false, expand: true });
-      } catch {
-        /* element might not be visible / expanded yet – ignore */
-      }
-    }
-  };
-
-  // Highlight the note whenever the active editor changes
+  // Register command to open/create note
   context.subscriptions.push(
-    vscode.window.onDidChangeActiveTextEditor(editor => {
-      if (!editor) { return; }
-      const uri = editor.document.uri;
-      if (uri.scheme !== 'file') { return; }
+    vscode.commands.registerCommand('file-tree-notes.openNote', async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        vscode.window.showWarningMessage('No active file.');
+        return;
+      }
+
+      const filePath = editor.document.uri.fsPath;
+      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+      if (!workspaceFolder) {
+        vscode.window.showWarningMessage('File is not in a workspace folder.');
+        return;
+      }
+
+      const workspaceRoot = workspaceFolder.uri.fsPath;
+      const config = vscode.workspace.getConfiguration('fileTreeNotes');
+      const openInSplitView = config.get<boolean>('openInSplitView') ?? true;
+      const relativePath = path.relative(workspaceRoot, filePath);
+      const notesDir = getNotesDirectory(workspaceRoot, context);
+      const notePath = path.join(notesDir, relativePath + '.md');
+
+      // Create the note file and its parent directories if they don't exist
+      const noteDir = path.dirname(notePath);
+      await fs.promises.mkdir(noteDir, { recursive: true });
+      await fs.promises.writeFile(notePath, `# Notes for ${relativePath}\n\n`, { flag: 'a' });
+
+      // Open the note file
+      const noteUri = vscode.Uri.file(notePath);
+      const doc = await vscode.workspace.openTextDocument(noteUri);
+      const noteEditor = await vscode.window.showTextDocument(doc, openInSplitView ? vscode.ViewColumn.Beside : vscode.ViewColumn.Active);
+
+      // Focus the File Tree Notes view
+      await vscode.commands.executeCommand('fileTreeNotes.notesView.focus');
+      // Wait a bit for the view to focus
+      await new Promise(resolve => setTimeout(resolve, 100));
+      // Refresh the tree view to ensure it's up to date
+      await vscode.commands.executeCommand('fileTreeNotes.notesView.refresh');
+      // Reveal the note in the tree
+      await revealInNotesTree(notePath);
+      // Focus back on the editor
+      await vscode.window.showTextDocument(noteEditor.document, noteEditor.viewColumn);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('file-tree-notes.openSourceFile', async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        vscode.window.showWarningMessage('No active note file.');
+        return;
+      }
 
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-      if (!workspaceFolder) { return; }
-      const notesDir = getNotesDirectory(workspaceFolder.uri.fsPath, context);
+      if (!workspaceFolder) {
+        vscode.window.showErrorMessage('Note is not in a workspace folder.');
+        return;
+      }
 
-      if (uri.fsPath.startsWith(notesDir) && uri.fsPath.endsWith('.md')) {
-        revealInNotesTree(uri.fsPath);
+      const notePath = editor.document.uri.fsPath;
+      const sourcePath = getSourceFilePath(notePath, workspaceFolder.uri.fsPath, context);
+      if (!sourcePath) {
+        vscode.window.showErrorMessage('Could not find the corresponding source file for this note.');
+        return;
+      }
+
+      const config = vscode.workspace.getConfiguration('fileTreeNotes');
+      const openInSplitView = config.get<boolean>('openInSplitView', true);
+
+      // Check if source file is already open in any visible editor
+      const alreadyOpen = vscode.window.visibleTextEditors.find(e => e.document.uri.fsPath === sourcePath);
+      if (alreadyOpen) {
+        await vscode.window.showTextDocument(alreadyOpen.document, alreadyOpen.viewColumn, false);
+      } else {
+        const sourceUri = vscode.Uri.file(sourcePath);
+        const doc = await vscode.workspace.openTextDocument(sourceUri);
+        vscode.window.showTextDocument(doc, openInSplitView ? vscode.ViewColumn.Beside : vscode.ViewColumn.Active);
       }
     })
   );
@@ -969,44 +1013,6 @@ export async function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  // Context key logic to toggle between onboarding and tree view
-  const updateSidebarContext = () => {
-    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-    const config = vscode.workspace.getConfiguration('fileTreeNotes');
-    const storageMode = config.get<string>('storageMode') || 'global';
-    
-    let hasNotes = false;
-    if (workspaceFolder) {
-      const notesDir = getNotesDirectory(workspaceFolder.uri.fsPath, context);
-      if (fs.existsSync(notesDir)) {
-        const entries = fs.readdirSync(notesDir, { withFileTypes: true });
-        hasNotes = entries.some(e => e.isFile() && e.name.endsWith('.md')) || 
-                   entries.some(e => e.isDirectory());
-      }
-    }
-    
-    const shouldShowOnboarding = !workspaceFolder || !hasNotes;
-    
-    // Set the context key and force a refresh
-    vscode.commands.executeCommand('setContext', 'fileTreeNotes.showOnboarding', shouldShowOnboarding).then(() => {
-      // Force a refresh of both views
-      vscode.commands.executeCommand('fileTreeNotes.notesView.refresh');
-      if (shouldShowOnboarding) {
-        vscode.commands.executeCommand('fileTreeNotes.onboardingView.refresh');
-      }
-    });
-  };
-
-  // Call on activation and on relevant events
-  updateSidebarContext();
-  context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(updateSidebarContext));
-  context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(updateSidebarContext));
-  context.subscriptions.push(vscode.workspace.onDidSaveTextDocument(updateSidebarContext));
-  context.subscriptions.push(vscode.workspace.onDidDeleteFiles(updateSidebarContext));
-
-  // Initial status bar update
-  updateStatusBar();
-
   // Add a command to switch storage modes
   context.subscriptions.push(
     vscode.commands.registerCommand('file-tree-notes.switchStorageMode', async () => {
@@ -1158,6 +1164,9 @@ export async function activate(context: vscode.ExtensionContext) {
       }
     })
   );
+
+  // Initial status bar update
+  updateStatusBar();
 }
 
 export function deactivate() {}
