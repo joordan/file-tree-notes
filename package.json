@@ -3,10 +3,11 @@
   "publisher": "JordanEspejo",
   "displayName": "File Tree Notes",
   "description": "Create a notes file tree from your files",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "icon": "resources/tree.png",
   "engines": {
-    "vscode": "^1.100.0"
+    "vscode": "^1.100.0",
+    "azdata": ">=1.37.0"
   },
   "categories": [
     "Other"
@@ -100,7 +101,8 @@
       "fileTreeNotes": [
         {
           "id": "fileTreeNotes.notesView",
-          "name": "File Tree Notes"
+          "name": "File Tree Notes",
+          "icon": "resources/tree.svg"
         }
       ]
     }

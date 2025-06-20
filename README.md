@@ -26,6 +26,20 @@ There are several ways to switch between a file and its corresponding note:
    
 The extension will automatically focus the appropriate view when opening a note. You can configure whether notes open in the full editor view (default) or in a split view by changing the `fileNotes.openInSplitView` setting.
 
+### Using with GitHub Copilot
+
+File Tree Notes works great with GitHub Copilot! Here's a tip for maximizing your productivity:
+
+1. Open both your source file and its corresponding note file
+2. Ask Copilot to analyze your code and generate notes based on what your source file is doing
+3. Try prompts like:
+   - "Generate documentation for this code"
+   - "Explain the key functions in this file"
+   - "Create notes about the architecture of this module"
+   - "Document the API endpoints in this file"
+
+Copilot can see both files in your context and can help create meaningful notes without you having to write everything from scratch.
+
 ### Storage Options
 
 The extension supports two storage modes for notes:
