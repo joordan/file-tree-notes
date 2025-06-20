@@ -2,7 +2,7 @@
 
 A VS Code extension that allows you to create and manage notes for your files. Each note is stored as a Markdown file and can be easily accessed from the source file.
 
-## Features
+## Features ✅
 
 - Create and manage notes for any file in your workspace
 - Notes are stored as Markdown files for easy editing and version control
@@ -12,7 +12,7 @@ A VS Code extension that allows you to create and manage notes for your files. E
 - Automatic .gitignore integration for notes directory
 - Tree view for browsing and managing notes
 
-## Usage
+## Usage 🧑‍💻
 
 ### Switching Between Notes and Source Files
 
@@ -26,21 +26,21 @@ There are several ways to switch between a file and its corresponding note:
    
 The extension will automatically focus the appropriate view when opening a note. You can configure whether notes open in the full editor view (default) or in a split view by changing the `fileNotes.openInSplitView` setting.
 
-### Using with GitHub Copilot
+## Using with GitHub Copilot 🤖
 
 File Tree Notes works great with GitHub Copilot! Here's a tip for maximizing your productivity:
 
-1. Open both your source file and its corresponding note file
+1. Open both your source file and its corresponding note file in the chat context
 2. Ask Copilot to analyze your code and generate notes based on what your source file is doing
 3. Try prompts like:
-   - "Generate documentation for this code"
+   - "Generate documentation for this code in the markdown file"
    - "Explain the key functions in this file"
    - "Create notes about the architecture of this module"
    - "Document the API endpoints in this file"
 
-Copilot can see both files in your context and can help create meaningful notes without you having to write everything from scratch.
+Copilot can see both files in your context and can help create meaningful notes.
 
-### Storage Options
+## Storage Options  🗄️
 
 The extension supports two storage modes for notes:
 
@@ -59,7 +59,7 @@ To switch storage modes:
 2. Use "File Tree Notes: Switch Notes Storage Mode"
 3. Choose between global and workspace storage
 
-### Configuration
+## Configuration ⚙️
 
 The extension can be configured through VS Code settings:
 
