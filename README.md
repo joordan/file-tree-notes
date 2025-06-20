@@ -28,15 +28,10 @@ The extension will automatically focus the appropriate view when opening a note.
 
 ## Using with GitHub Copilot 🤖
 
-File Tree Notes works great with GitHub Copilot! Here's a tip for maximizing your productivity:
+File Tree Notes works great with GitHub Copilot! Try this:
 
-1. Open both your source file and its corresponding note file in the chat context
-2. Ask Copilot to analyze your code and generate notes based on what your source file is doing
-3. Try prompts like:
-   - "Generate documentation for this code in the markdown file"
-   - "Explain the key functions in this file"
-   - "Create notes about the architecture of this module"
-   - "Document the API endpoints in this file"
+1. Open both your source file and its corresponding note file in the chat context, use Agent mode
+2. Ask "Generate documentation for this code in the markdown file"
 
 Copilot can see both files in your context and can help create meaningful notes.
 
