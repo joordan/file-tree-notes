@@ -3,10 +3,10 @@
   "publisher": "JordanEspejo",
   "displayName": "File Tree Notes",
   "description": "Create a notes file tree from your files",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "icon": "resources/tree.png",
   "engines": {
-    "vscode": "^1.100.0",
+    "vscode": "^1.81.0",
     "azdata": ">=1.37.0"
   },
   "categories": [
@@ -114,7 +114,7 @@
   "devDependencies": {
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
-    "@types/vscode": "^1.100.0",
+    "@types/vscode": "^1.81.0",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
     "@typescript-eslint/parser": "^8.31.1",
     "@vscode/test-cli": "^0.0.10",
