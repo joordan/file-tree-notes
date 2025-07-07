@@ -24,7 +24,7 @@ There are several ways to switch between a file and its corresponding note:
    - Windows/Linux: `Ctrl+Alt+N`
    - Mac: `Cmd+Alt+N`
    
-The extension will automatically focus the appropriate view when opening a note. You can configure whether notes open in the full editor view (default) or in a split view by changing the `fileNotes.openInSplitView` setting.
+The extension will automatically focus the appropriate view when opening a note. You can quickly toggle whether notes open in the full editor view (default) or in a split view using the "File Tree Notes: Toggle Split View" command from the command palette. You can also configure this by changing the `fileTreeNotes.openInSplitView` setting.
 
 ## Using with GitHub Copilot 🤖
 

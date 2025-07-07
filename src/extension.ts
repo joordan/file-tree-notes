@@ -964,6 +964,21 @@ export async function activate(context: vscode.ExtensionContext) {
     })
   );
 
+  // Add a command to toggle split view setting
+  context.subscriptions.push(
+    vscode.commands.registerCommand('file-tree-notes.toggleSplitView', async () => {
+      const config = vscode.workspace.getConfiguration('fileTreeNotes');
+      const currentSplitView = config.get<boolean>('openInSplitView') ?? false;
+      const newSplitView = !currentSplitView;
+      
+      await config.update('openInSplitView', newSplitView, true);
+      
+      vscode.window.showInformationMessage(
+        `Split view is now ${newSplitView ? 'enabled' : 'disabled'}. Notes will open ${newSplitView ? 'side-by-side' : 'in the same tab group'}.`
+      );
+    })
+  );
+
   // Register command to delete a note
   context.subscriptions.push(
     vscode.commands.registerCommand('file-tree-notes.deleteNote', async (item: NoteTreeItem) => {

@@ -3,7 +3,7 @@
   "publisher": "JordanEspejo",
   "displayName": "File Tree Notes",
   "description": "Create a notes file tree from your files",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "icon": "resources/tree.png",
   "engines": {
     "vscode": "^1.81.0",
@@ -29,6 +29,10 @@
       {
         "command": "file-tree-notes.switchStorageMode",
         "title": "File Tree Notes: Switch Notes Storage Mode"
+      },
+      {
+        "command": "file-tree-notes.toggleSplitView",
+        "title": "File Tree Notes: Toggle Split View"
       },
       {
         "command": "file-tree-notes.deleteNote",
