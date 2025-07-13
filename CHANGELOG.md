@@ -2,6 +2,10 @@
 
 All notable changes to the "File Tree Notes" extension will be documented in this file.
 
+## [0.0.15] - 2024-06-09
+### Added
+- Add split view to context menu.
+
 ## [0.0.14] - 2024-06-09
 ### Added
 - Right-click context menu support in the editor: you can now Create/Open Note or Open Source File directly from the editor context menu.

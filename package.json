@@ -3,7 +3,7 @@
   "publisher": "JordanEspejo",
   "displayName": "File Tree Notes",
   "description": "Create a notes file tree from your files",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "icon": "resources/tree.png",
   "engines": {
     "vscode": "^1.81.0",
@@ -53,6 +53,10 @@
       {
         "command": "file-tree-notes.deleteNote",
         "title": "Delete Note"
+      },
+      {
+        "command": "file-tree-notes.openNoteInSplitView",
+        "title": "Open Note in Split View"
       }
     ],
     "keybindings": [
@@ -111,7 +115,12 @@
       "explorer/context": [
         {
           "command": "file-tree-notes.createOrOpenNote",
-          "when": "resourceExtname != .md && resourceExtname != .notes && resourceExtname != .gitignore && resourceExtname != .git && resourceExtname != .vscode && resourceExtname != node_modules",
+          "when": "resourceExtname != .md",
+          "group": "navigation"
+        },
+        {
+          "command": "file-tree-notes.openNoteInSplitView",
+          "when": "resourceExtname != .md",
           "group": "navigation"
         },
         {
@@ -123,6 +132,11 @@
       "editor/context": [
         {
           "command": "file-tree-notes.createOrOpenNote",
+          "when": "resourceExtname != .md",
+          "group": "navigation"
+        },
+        {
+          "command": "file-tree-notes.openNoteInSplitView",
           "when": "resourceExtname != .md",
           "group": "navigation"
         },
