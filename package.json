@@ -3,7 +3,7 @@
   "publisher": "JordanEspejo",
   "displayName": "File Tree Notes",
   "description": "Create a notes file tree from your files",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "icon": "resources/tree.png",
   "engines": {
     "vscode": "^1.81.0",
@@ -35,12 +35,24 @@
         "title": "File Tree Notes: Toggle Split View"
       },
       {
-        "command": "file-tree-notes.deleteNote",
-        "title": "Delete Note"
-      },
-      {
         "command": "file-tree-notes.deleteFolder",
         "title": "Delete Folder"
+      },
+      {
+        "command": "file-tree-notes.createOrOpenNote",
+        "title": "Create/Open Note"
+      },
+      {
+        "command": "file-tree-notes.openSourceForNote",
+        "title": "Open Source File"
+      },
+      {
+        "command": "file-tree-notes.openSourceForNoteFromTree",
+        "title": "Open Source File"
+      },
+      {
+        "command": "file-tree-notes.deleteNote",
+        "title": "Delete Note"
       }
     ],
     "keybindings": [
@@ -81,13 +93,42 @@
     "menus": {
       "view/item/context": [
         {
+          "command": "file-tree-notes.openSourceForNoteFromTree",
+          "when": "view == fileTreeNotes.notesView && viewItem == noteFile",
+          "group": "navigation@1"
+        },
+        {
           "command": "file-tree-notes.deleteNote",
           "when": "view == fileTreeNotes.notesView && viewItem == noteFile",
-          "group": "navigation"
+          "group": "navigation@2"
         },
         {
           "command": "file-tree-notes.deleteFolder",
           "when": "view == fileTreeNotes.notesView && viewItem == noteFolder",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "file-tree-notes.createOrOpenNote",
+          "when": "resourceExtname != .md && resourceExtname != .notes && resourceExtname != .gitignore && resourceExtname != .git && resourceExtname != .vscode && resourceExtname != node_modules",
+          "group": "navigation"
+        },
+        {
+          "command": "file-tree-notes.openSourceForNote",
+          "when": "resourceExtname == .md",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "file-tree-notes.createOrOpenNote",
+          "when": "resourceExtname != .md",
+          "group": "navigation"
+        },
+        {
+          "command": "file-tree-notes.openSourceForNote",
+          "when": "resourceExtname == .md",
           "group": "navigation"
         }
       ]

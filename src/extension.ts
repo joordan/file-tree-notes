@@ -495,6 +495,13 @@ export async function activate(context: vscode.ExtensionContext) {
     showCollapseAll: true
   });
 
+  // Function to check if a file has a note
+  const checkFileHasNote = (filePath: string, workspaceRoot: string): boolean => {
+    const relativePath = path.relative(workspaceRoot, filePath);
+    const notePath = getNotePath(workspaceRoot, relativePath, context);
+    return notePath !== null;
+  };
+
   // Function to update the sidebar context
   const updateSidebarContext = async () => {
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
@@ -516,6 +523,8 @@ export async function activate(context: vscode.ExtensionContext) {
       await vscode.commands.executeCommand('setContext', 'fileTreeNotes:hasNotes', false);
     }
   };
+
+
 
   // Update sidebar context on activation and when files change
   await updateSidebarContext();
@@ -909,6 +918,149 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('file-tree-notes.openNoteFile', async (uri: vscode.Uri) => {
       const doc = await vscode.workspace.openTextDocument(uri);
       vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
+    })
+  );
+
+  // Register command to open source file from notes tree
+  context.subscriptions.push(
+    vscode.commands.registerCommand('file-tree-notes.openSourceForNoteFromTree', async (item: NoteTreeItem) => {
+      if (!item.resourceUri) {
+        return;
+      }
+
+      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+      if (!workspaceFolder) {
+        vscode.window.showErrorMessage('Note is not in a workspace folder.');
+        return;
+      }
+
+      const notePath = item.resourceUri.fsPath;
+      const sourcePath = getSourceFilePath(notePath, workspaceFolder.uri.fsPath, context);
+      if (!sourcePath) {
+        vscode.window.showErrorMessage('Could not find the corresponding source file for this note.');
+        return;
+      }
+
+      const config = vscode.workspace.getConfiguration('fileTreeNotes');
+      const openInSplitView = config.get<boolean>('openInSplitView', true);
+
+      // Check if source file is already open in any visible editor
+      const alreadyOpen = vscode.window.visibleTextEditors.find(e => e.document.uri.fsPath === sourcePath);
+      if (alreadyOpen) {
+        await vscode.window.showTextDocument(alreadyOpen.document, alreadyOpen.viewColumn, false);
+      } else {
+        const sourceUri = vscode.Uri.file(sourcePath);
+        const doc = await vscode.workspace.openTextDocument(sourceUri);
+        vscode.window.showTextDocument(doc, openInSplitView ? vscode.ViewColumn.Beside : vscode.ViewColumn.Active);
+      }
+
+      // Focus the explorer view and reveal the file
+      await vscode.commands.executeCommand('workbench.view.explorer');
+      await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(sourcePath));
+    })
+  );
+
+  // Register command to create or open note for a file (from context menu)
+  context.subscriptions.push(
+    vscode.commands.registerCommand('file-tree-notes.createOrOpenNote', async (uri: vscode.Uri) => {
+      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+      if (!workspaceFolder) {
+        vscode.window.showWarningMessage('File is not in a workspace folder.');
+        return;
+      }
+
+      const filePath = uri.fsPath;
+      const workspaceRoot = workspaceFolder.uri.fsPath;
+      const config = vscode.workspace.getConfiguration('fileTreeNotes');
+      const openInSplitView = config.get<boolean>('openInSplitView') ?? true;
+      const relativePath = path.relative(workspaceRoot, filePath);
+      
+      // Check if this file already has a note
+      const hasNote = checkFileHasNote(filePath, workspaceRoot);
+      
+      if (hasNote) {
+        // Note exists, open it
+        const notePath = getNotePath(workspaceRoot, relativePath, context);
+        if (!notePath) {
+          vscode.window.showWarningMessage('No note exists for this file.');
+          return;
+        }
+
+        const noteUri = vscode.Uri.file(notePath);
+        const doc = await vscode.workspace.openTextDocument(noteUri);
+        const noteEditor = await vscode.window.showTextDocument(doc, openInSplitView ? vscode.ViewColumn.Beside : vscode.ViewColumn.Active);
+
+        // Focus the File Tree Notes view
+        await vscode.commands.executeCommand('fileTreeNotes.notesView.focus');
+        // Wait a bit for the view to focus
+        await new Promise(resolve => setTimeout(resolve, 100));
+        // Refresh the tree view to ensure it's up to date
+        await vscode.commands.executeCommand('fileTreeNotes.notesView.refresh');
+        // Reveal the note in the tree
+        await revealInNotesTree(notePath);
+        // Focus back on the editor
+        await vscode.window.showTextDocument(noteEditor.document, noteEditor.viewColumn);
+      } else {
+        // Note doesn't exist, create it
+        const notesDir = getNotesDirectory(workspaceRoot, context);
+        const notePath = path.join(notesDir, relativePath + '.md');
+
+        // Create the note file and its parent directories if they don't exist
+        const noteDir = path.dirname(notePath);
+        await fs.promises.mkdir(noteDir, { recursive: true });
+        await fs.promises.writeFile(notePath, `# Notes for ${relativePath}\n\n`, { flag: 'a' });
+
+        // Open the note file
+        const noteUri = vscode.Uri.file(notePath);
+        const doc = await vscode.workspace.openTextDocument(noteUri);
+        const noteEditor = await vscode.window.showTextDocument(doc, openInSplitView ? vscode.ViewColumn.Beside : vscode.ViewColumn.Active);
+
+        // Focus the File Tree Notes view
+        await vscode.commands.executeCommand('fileTreeNotes.notesView.focus');
+        // Wait a bit for the view to focus
+        await new Promise(resolve => setTimeout(resolve, 100));
+        // Refresh the tree view to ensure it's up to date
+        await vscode.commands.executeCommand('fileTreeNotes.notesView.refresh');
+        // Reveal the note in the tree
+        await revealInNotesTree(notePath);
+        // Focus back on the editor
+        await vscode.window.showTextDocument(noteEditor.document, noteEditor.viewColumn);
+      }
+    })
+  );
+
+  // Register command to open source file for a note (from context menu)
+  context.subscriptions.push(
+    vscode.commands.registerCommand('file-tree-notes.openSourceForNote', async (uri: vscode.Uri) => {
+      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+      if (!workspaceFolder) {
+        vscode.window.showErrorMessage('Note is not in a workspace folder.');
+        return;
+      }
+
+      const notePath = uri.fsPath;
+      const sourcePath = getSourceFilePath(notePath, workspaceFolder.uri.fsPath, context);
+      if (!sourcePath) {
+        vscode.window.showErrorMessage('Could not find the corresponding source file for this note.');
+        return;
+      }
+
+      const config = vscode.workspace.getConfiguration('fileTreeNotes');
+      const openInSplitView = config.get<boolean>('openInSplitView', true);
+
+      // Check if source file is already open in any visible editor
+      const alreadyOpen = vscode.window.visibleTextEditors.find(e => e.document.uri.fsPath === sourcePath);
+      if (alreadyOpen) {
+        await vscode.window.showTextDocument(alreadyOpen.document, alreadyOpen.viewColumn, false);
+      } else {
+        const sourceUri = vscode.Uri.file(sourcePath);
+        const doc = await vscode.workspace.openTextDocument(sourceUri);
+        vscode.window.showTextDocument(doc, openInSplitView ? vscode.ViewColumn.Beside : vscode.ViewColumn.Active);
+      }
+
+      // Focus the explorer view and reveal the file
+      await vscode.commands.executeCommand('workbench.view.explorer');
+      await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(sourcePath));
     })
   );
 

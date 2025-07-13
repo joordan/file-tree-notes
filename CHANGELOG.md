@@ -2,7 +2,12 @@
 
 All notable changes to the "File Tree Notes" extension will be documented in this file.
 
+## [0.0.14] - 2024-06-09
+### Added
+- Right-click context menu support in the editor: you can now Create/Open Note or Open Source File directly from the editor context menu.
+
 ## [0.0.6] - 2025-06-12
+### 
 - Fixed: .notes directory is now only added to .gitignore when using workspace storage mode, not global mode.
 
 ## [0.0.5] - 2024-03-19

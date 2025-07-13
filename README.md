@@ -18,12 +18,13 @@ A VS Code extension that allows you to create and manage notes for your files. E
 
 There are several ways to switch between a file and its corresponding note:
 
-1. **Status Bar**: Click the "Create Note" or "Open Note" button in the status bar
-2. **Command Palette**: Use the "File Tree Notes: Toggle between Note and Source" command
+1. **Status Bar**: Click the "Create Note" or "Open Note" button in the status bar.
+2. **Right-Click Context Menu**: Right-click on a file in the Explorer or inside the editor and select "Create/Open Note" (for source files) or "Open Source File" (for note files).
 3. **Keyboard Shortcut**: 
    - Windows/Linux: `Ctrl+Alt+N`
    - Mac: `Cmd+Alt+N`
-   
+4. **Command Palette**: Use the "File Tree Notes: Toggle between Note and Source" command.
+
 The extension will automatically focus the appropriate view when opening a note. You can quickly toggle whether notes open in the full editor view (default) or in a split view using the "File Tree Notes: Toggle Split View" command from the command palette. You can also configure this by changing the `fileTreeNotes.openInSplitView` setting.
 
 ## Using with GitHub Copilot 🤖
