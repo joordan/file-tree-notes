@@ -560,17 +560,27 @@ export async function activate(context: vscode.ExtensionContext) {
   );
   context.subscriptions.push(statusBarItem);
 
+  // Create auto close notes status bar item
+  // const autoCloseStatusBarItem = vscode.window.createStatusBarItem(
+  //   vscode.StatusBarAlignment.Right,
+  //   99
+  // );
+  // autoCloseStatusBarItem.command = 'file-tree-notes.toggleAutoCloseNotes';
+  // context.subscriptions.push(autoCloseStatusBarItem);
+
   // Function to update status bar
   const updateStatusBar = () => {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
       statusBarItem.hide();
+      // autoCloseStatusBarItem.hide();
       return;
     }
 
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
     if (!workspaceFolder) {
       statusBarItem.hide();
+      // autoCloseStatusBarItem.hide();
       return;
     }
 
@@ -579,13 +589,19 @@ export async function activate(context: vscode.ExtensionContext) {
     const config = vscode.workspace.getConfiguration('fileTreeNotes');
     const storageMode = config.get<string>('storageMode') || 'global';
     const notesDir = getNotesDirectory(workspaceRoot, context);
+    const autoCloseNotes = config.get<boolean>('autoCloseNotes') ?? true;
+    
+    // Update auto close notes status bar item
+    // autoCloseStatusBarItem.text = autoCloseNotes ? "$(check) Auto-Close" : "$(x) Keep Open";
+    // autoCloseStatusBarItem.tooltip = `Auto Close Notes: ${autoCloseNotes ? 'Enabled' : 'Disabled'} - Click to toggle`;
+    // autoCloseStatusBarItem.show();
     
     // Check if current file is a note
     if (filePath.startsWith(notesDir) && filePath.endsWith('.md')) {
       // We're in a note file, show "Open Source" command
       statusBarItem.command = 'file-tree-notes.toggleNoteSource';
       statusBarItem.text = "$(file-code) Open Source";
-      statusBarItem.tooltip = "Open Source File for Current Note";
+      statusBarItem.tooltip = `Open Source File for Current Note${autoCloseNotes ? ' (Note will auto-close if saved)' : ' (Note will remain open)'}`;
       statusBarItem.show();
     } else {
       // We're in a source file, show "Open/Create Note" command
@@ -684,6 +700,11 @@ export async function activate(context: vscode.ExtensionContext) {
         }
         triggerMigrationIfNeeded(context);
       }
+      
+      // Update status bar when auto close notes setting changes
+      // if (e.affectsConfiguration('fileTreeNotes.autoCloseNotes')) {
+      //   updateStatusBar();
+      // }
     })
   );
 
@@ -748,6 +769,7 @@ export async function activate(context: vscode.ExtensionContext) {
       }
 
       const notePath = editor.document.uri.fsPath;
+      const noteDocument = editor.document;
       const sourcePath = getSourceFilePath(notePath, workspaceFolder.uri.fsPath, context);
       if (!sourcePath) {
         vscode.window.showErrorMessage('Could not find the corresponding source file for this note.');
@@ -756,6 +778,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
       const config = vscode.workspace.getConfiguration('fileTreeNotes');
       const openInSplitView = config.get<boolean>('openInSplitView', true);
+      const autoCloseNotes = config.get<boolean>('autoCloseNotes') ?? true;
 
       // Check if source file is already open in any visible editor
       const alreadyOpen = vscode.window.visibleTextEditors.find(e => e.document.uri.fsPath === sourcePath);
@@ -765,6 +788,19 @@ export async function activate(context: vscode.ExtensionContext) {
         const sourceUri = vscode.Uri.file(sourcePath);
         const doc = await vscode.workspace.openTextDocument(sourceUri);
         vscode.window.showTextDocument(doc, openInSplitView ? vscode.ViewColumn.Beside : vscode.ViewColumn.Active);
+      }
+
+      // Auto-close the note if enabled and the note is saved (do this after opening the source file)
+      if (autoCloseNotes && !noteDocument.isDirty) {
+        console.log('Auto-closing note in openSourceFile:', notePath, 'isDirty:', noteDocument.isDirty);
+        // Find and close the note tab specifically
+        const allTabs = vscode.window.tabGroups.all.flatMap(group => group.tabs);
+        const noteTab = allTabs.find(tab => tab.input instanceof vscode.TabInputText && tab.input.uri.fsPath === notePath);
+        if (noteTab) {
+          await vscode.window.tabGroups.close(noteTab);
+        }
+      } else {
+        console.log('Not auto-closing note in openSourceFile:', notePath, 'autoCloseNotes:', autoCloseNotes, 'isDirty:', noteDocument.isDirty);
       }
     })
   );
@@ -790,9 +826,14 @@ export async function activate(context: vscode.ExtensionContext) {
       const storageMode = config.get<string>('storageMode') || 'global';
       const notesDir = getNotesDirectory(workspaceRoot, context);
       const openInSplitView = config.get<boolean>('openInSplitView') ?? true;
+      const autoCloseNotes = config.get<boolean>('autoCloseNotes') ?? true;
 
       // Check if we're in a note file
       if (filePath.startsWith(notesDir) && filePath.endsWith('.md')) {
+        // Store reference to the note editor before switching focus
+        const noteEditor = editor;
+        const noteDocument = editor.document;
+        
         // We're in a note file, find and open the source file
         const sourcePath = await getSourceFilePath(filePath, workspaceRoot, context);
         if (!sourcePath) {
@@ -827,6 +868,19 @@ export async function activate(context: vscode.ExtensionContext) {
         await vscode.commands.executeCommand('workbench.view.explorer');
         await vscode.commands.executeCommand('revealInExplorer', sourceUri);
         await vscode.window.showTextDocument(targetEditor.document, targetEditor.viewColumn);
+
+        // Auto-close the note if enabled and the note is saved (do this after focusing the source file)
+        if (autoCloseNotes && !noteDocument.isDirty) {
+          console.log('Auto-closing note:', filePath, 'isDirty:', noteDocument.isDirty);
+          // Find and close the note tab specifically
+          const allTabs = vscode.window.tabGroups.all.flatMap(group => group.tabs);
+          const noteTab = allTabs.find(tab => tab.input instanceof vscode.TabInputText && tab.input.uri.fsPath === filePath);
+          if (noteTab) {
+            await vscode.window.tabGroups.close(noteTab);
+          }
+        } else {
+          console.log('Not auto-closing note:', filePath, 'autoCloseNotes:', autoCloseNotes, 'isDirty:', noteDocument.isDirty);
+        }
       } else {
         // We're in a source file, find or create the note
         const relativePath = path.relative(workspaceRoot, filePath);
@@ -943,6 +997,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
       const config = vscode.workspace.getConfiguration('fileTreeNotes');
       const openInSplitView = config.get<boolean>('openInSplitView', true);
+      const autoCloseNotes = config.get<boolean>('autoCloseNotes') ?? true;
 
       // Check if source file is already open in any visible editor
       const alreadyOpen = vscode.window.visibleTextEditors.find(e => e.document.uri.fsPath === sourcePath);
@@ -952,6 +1007,15 @@ export async function activate(context: vscode.ExtensionContext) {
         const sourceUri = vscode.Uri.file(sourcePath);
         const doc = await vscode.workspace.openTextDocument(sourceUri);
         vscode.window.showTextDocument(doc, openInSplitView ? vscode.ViewColumn.Beside : vscode.ViewColumn.Active);
+      }
+
+      // Auto-close the note if it's currently open and enabled
+      if (autoCloseNotes) {
+        const activeEditor = vscode.window.activeTextEditor;
+        if (activeEditor && activeEditor.document.uri.fsPath === notePath && !activeEditor.document.isDirty) {
+          // Close the note editor
+          await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+        }
       }
 
       // Focus the explorer view and reveal the file
@@ -1100,6 +1164,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
       const config = vscode.workspace.getConfiguration('fileTreeNotes');
       const openInSplitView = config.get<boolean>('openInSplitView', true);
+      const autoCloseNotes = config.get<boolean>('autoCloseNotes') ?? true;
 
       // Check if source file is already open in any visible editor
       const alreadyOpen = vscode.window.visibleTextEditors.find(e => e.document.uri.fsPath === sourcePath);
@@ -1109,6 +1174,15 @@ export async function activate(context: vscode.ExtensionContext) {
         const sourceUri = vscode.Uri.file(sourcePath);
         const doc = await vscode.workspace.openTextDocument(sourceUri);
         vscode.window.showTextDocument(doc, openInSplitView ? vscode.ViewColumn.Beside : vscode.ViewColumn.Active);
+      }
+
+      // Auto-close the note if it's currently open and enabled
+      if (autoCloseNotes) {
+        const activeEditor = vscode.window.activeTextEditor;
+        if (activeEditor && activeEditor.document.uri.fsPath === notePath && !activeEditor.document.isDirty) {
+          // Close the note editor
+          await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+        }
       }
 
       // Focus the explorer view and reveal the file
@@ -1169,6 +1243,13 @@ export async function activate(context: vscode.ExtensionContext) {
     })
   );
 
+  // Add command to open auto close notes settings
+  context.subscriptions.push(
+    vscode.commands.registerCommand('file-tree-notes.openAutoCloseSettings', async () => {
+      await vscode.commands.executeCommand('workbench.action.openSettings', 'fileTreeNotes.autoCloseNotes');
+    })
+  );
+
   // Add a command to toggle split view setting
   context.subscriptions.push(
     vscode.commands.registerCommand('file-tree-notes.toggleSplitView', async () => {
@@ -1180,6 +1261,33 @@ export async function activate(context: vscode.ExtensionContext) {
       
       vscode.window.showInformationMessage(
         `Split view is now ${newSplitView ? 'enabled' : 'disabled'}. Notes will open ${newSplitView ? 'side-by-side' : 'in the same tab group'}.`
+      );
+    })
+  );
+
+  // Add a command to toggle auto close notes setting
+  context.subscriptions.push(
+    vscode.commands.registerCommand('file-tree-notes.toggleAutoCloseNotes', async () => {
+      const config = vscode.workspace.getConfiguration('fileTreeNotes');
+      const currentAutoClose = config.get<boolean>('autoCloseNotes') ?? true;
+      const newAutoClose = !currentAutoClose;
+      
+      await config.update('autoCloseNotes', newAutoClose, true);
+      
+      vscode.window.showInformationMessage(
+        `Auto close notes is now ${newAutoClose ? 'enabled' : 'disabled'}. ${newAutoClose ? 'Notes will automatically close when switching to source files (if saved).' : 'Notes will remain open when switching to source files.'}`
+      );
+    })
+  );
+
+  // Add a command to show auto close notes status
+  context.subscriptions.push(
+    vscode.commands.registerCommand('file-tree-notes.showAutoCloseStatus', async () => {
+      const config = vscode.workspace.getConfiguration('fileTreeNotes');
+      const autoCloseNotes = config.get<boolean>('autoCloseNotes') ?? true;
+      
+      vscode.window.showInformationMessage(
+        `Auto Close Notes: ${autoCloseNotes ? 'Enabled' : 'Disabled'}. ${autoCloseNotes ? 'Notes will automatically close when switching to source files (if saved).' : 'Notes will remain open when switching to source files.'}`
       );
     })
   );

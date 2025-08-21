@@ -2,6 +2,18 @@
 
 All notable changes to the "File Tree Notes" extension will be documented in this file.
 
+## [0.0.16] - 2024-12-19
+### Added
+- **Auto-close notes feature**: Automatically close saved notes when switching to source files
+- Toggle command for auto-close feature (`file-tree-notes.toggleAutoCloseNotes`)
+- Keyboard shortcut for toggling auto-close (Ctrl+Alt+C / Cmd+Alt+C)
+- Configuration setting `fileTreeNotes.autoCloseNotes` (enabled by default)
+- Smart detection: only closes notes that are saved (unsaved changes are preserved)
+
+### Changed
+- Improved note-to-source switching logic for better reliability
+- Enhanced user experience with automatic workspace cleanup
+
 ## [0.0.15] - 2024-06-09
 ### Added
 - Add split view to context menu.

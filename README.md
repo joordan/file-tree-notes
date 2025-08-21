@@ -8,6 +8,7 @@ A VS Code extension that allows you to create and manage notes for your files. E
 - Notes are stored as Markdown files for easy editing and version control
 - Quick access to notes through the status bar
 - Toggle between source files and their notes with a single click or keyboard shortcut
+- Auto-close saved notes when switching to source files (configurable)
 - Support for both global and workspace-local note storage
 - Automatic .gitignore integration for notes directory
 - Tree view for browsing and managing notes
@@ -59,7 +60,23 @@ To switch storage modes:
 
 The extension can be configured through VS Code settings:
 
-- `fileNotes.storageMode`: Choose between 'global' and 'workspace' storage
-- `fileNotes.globalNotesPath`: Custom path for global storage
-- `fileNotes.workspaceNotesPath`: Custom path for workspace storage (default: '.notes')
-- `fileNotes.openInSplitView`: Open notes in a split view (default: false)
+- `fileTreeNotes.storageMode`: Choose between 'global' and 'workspace' storage
+- `fileTreeNotes.globalNotesPath`: Custom path for global storage
+- `fileTreeNotes.workspaceNotesPath`: Custom path for workspace storage (default: '.notes')
+- `fileTreeNotes.openInSplitView`: Open notes in a split view (default: false)
+- `fileTreeNotes.autoCloseNotes`: Automatically close saved notes when switching to source files (default: true)
+
+## Auto-Close Notes Feature
+
+Auto-close automatically closes saved notes when you switch to their corresponding source files. This helps keep your workspace clean and focused.
+
+**How it works:**
+- When you switch from a note to a source file, the note automatically closes (if enabled)
+- **Only saved notes are auto-closed** - unsaved changes are never lost
+- The feature is enabled by default but can be toggled on/off
+
+**To toggle auto-close:**
+- **Command Palette**: Use "File Tree Notes: Toggle Auto Close Notes"
+- **Keyboard Shortcut**: 
+  - Windows/Linux: `Ctrl+Alt+C`
+  - Mac: `Cmd+Alt+C`
