@@ -2,7 +2,7 @@
 
 All notable changes to the "File Tree Notes" extension will be documented in this file.
 
-## [0.0.16] - 2024-12-19
+## [0.0.16] - 2025-08-20
 ### Added
 - **Auto-close notes feature**: Automatically close saved notes when switching to source files
 - Toggle command for auto-close feature (`file-tree-notes.toggleAutoCloseNotes`)
@@ -14,31 +14,31 @@ All notable changes to the "File Tree Notes" extension will be documented in thi
 - Improved note-to-source switching logic for better reliability
 - Enhanced user experience with automatic workspace cleanup
 
-## [0.0.15] - 2024-06-09
+## [0.0.15] - 2025-07-12
 ### Added
 - Add split view to context menu.
 
-## [0.0.14] - 2024-06-09
+## [0.0.14] - 2025-06-12
 ### Added
 - Right-click context menu support in the editor: you can now Create/Open Note or Open Source File directly from the editor context menu.
 
-## [0.0.6] - 2025-06-12
+## [0.0.6] 
 ### 
 - Fixed: .notes directory is now only added to .gitignore when using workspace storage mode, not global mode.
 
-## [0.0.5] - 2024-03-19
+## [0.0.5] 
 
 ### Removed
 - Removed onboarding view and related functionality for simplicity
 
-## [0.0.4] - 2024-03-19
+## [0.0.4] 
 
 ### Fixed
 - Improved tree view selection and focus behavior when switching between source files and notes
 - Added proper file highlighting in the tree view when opening notes
 - Fixed tree view refresh command not found error
 
-## [0.0.3] - 2024-03-19
+## [0.0.3] 
 
 ### Added
 - Added onboarding view when no notes exist
@@ -49,7 +49,7 @@ All notable changes to the "File Tree Notes" extension will be documented in thi
 - Changed default notes directory to `.notes`
 - Improved tree view organization and navigation
 
-## [0.0.2] - 2024-03-19
+## [0.0.2] 
 
 ### Added
 - Added support for nested note directories
@@ -60,7 +60,7 @@ All notable changes to the "File Tree Notes" extension will be documented in thi
 - Improved error handling and user feedback
 - Enhanced tree view performance
 
-## [0.0.1] - 2024-03-19
+## [0.0.1] 
 
 ### Added
 - Initial release
