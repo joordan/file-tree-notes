@@ -3,7 +3,7 @@
   "publisher": "JordanEspejo",
   "displayName": "File Tree Notes",
   "description": "Create a notes file tree from your files",
-  "version": "0.0.17",
+  "version": "0.0.18",
   "icon": "resources/tree.png",
   "engines": {
     "vscode": "^1.81.0",
@@ -132,18 +132,6 @@
         {
           "command": "file-tree-notes.deleteFolder",
           "when": "view == fileTreeNotes.notesView && viewItem == noteFolder",
-          "group": "navigation"
-        }
-      ],
-      "view/title": [
-        {
-          "command": "file-tree-notes.toggleAutoCloseNotes",
-          "when": "view == fileTreeNotes.notesView",
-          "group": "navigation"
-        },
-        {
-          "command": "file-tree-notes.showAutoCloseStatus",
-          "when": "view == fileTreeNotes.notesView",
           "group": "navigation"
         }
       ],
